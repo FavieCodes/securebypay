@@ -8,6 +8,80 @@ import '../state/auth_state.dart';
 import '../models/user_model.dart';
 import 'login_screen.dart';
 
+void _showComingSoonDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return Dialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 280),
+          child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryPurple.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.rocket_launch_rounded, color: AppColors.primaryPurple, size: 28),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Coming Soon',
+                style: TextStyle(
+                  fontFamily: 'DM Sans',
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18,
+                  color: Color(0xFF171717),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'This feature is coming soon. Stay tuned!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'DM Sans',
+                  fontWeight: FontWeight.w400,
+                  fontSize: 14,
+                  color: Color(0xFF737373),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryPurple,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const Text(
+                    'Got it',
+                    style: TextStyle(
+                      fontFamily: 'DM Sans',
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        ),
+      );
+    },
+  );
+}
+
 class _NavItemData {
   final IconData icon;
   final String title;
@@ -68,11 +142,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // The "Dashboard / Shipments / Sign in / ..." breadcrumb strip
-              // that used to sit at the top of every screen has been
-              // removed entirely. On mobile we still need a way to open
-              // the drawer, so just the menu button remains, right-aligned
-              // with no label next to it.
               if (!isDesktop) ...[
                 Row(
                   children: [
@@ -126,12 +195,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-/// A circular avatar that shows the user's photo when one is set, and
-/// falls back to their initials (e.g. "MI") otherwise. [AppUser] has no
-/// photo field yet — nothing in the app currently supports uploading a
-/// profile picture — so today this always renders initials, which is
-/// exactly the "no picture uploaded" case. [photoUrl] is wired up ready
-/// for whenever profile-picture upload is added to the backend/model.
+/// A circular avatar that shows the user's photo when one is set, and falls back to their initials otherwise.
 class InitialsAvatar extends StatelessWidget {
   final AppUser? user;
   final String? photoUrl;
@@ -181,10 +245,6 @@ class InitialsAvatar extends StatelessWidget {
   }
 }
 
-/// Wraps [InitialsAvatar] with a small camera badge; tapping it opens the
-/// system image picker, uploads the chosen photo via [AuthState.uploadAvatar],
-/// and — on success — the avatar swaps from initials to the real photo
-/// immediately, since [AuthState] notifies listeners with the updated user.
 class _AvatarUploadButton extends StatefulWidget {
   final AuthState auth;
   const _AvatarUploadButton({required this.auth});
@@ -274,10 +334,6 @@ class _Sidebar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Matches the height of the "Invite & Earn" title + subtitle
-          // block at the top of _MainContent, so the nav list starts
-          // level with the banner instead of level with that text — the
-          // sidebar has nothing to show at that row, so it stays blank.
           const SizedBox(height: 90),
           Expanded(
             child: ListView.builder(
@@ -347,6 +403,12 @@ class _Sidebar extends StatelessWidget {
                 );
               }
             },
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              alignment: Alignment.centerLeft,
+            ),
             icon: const Icon(Icons.logout, size: 18, color: AppColors.textSecondary),
             label: const Text('Logout', style: TextStyle(color: AppColors.textSecondary)),
           ),
@@ -457,6 +519,7 @@ class _ShipmentData {
   final String amount;
   final String status;
   final String processingTime;
+  final bool isPaid;
 
   const _ShipmentData({
     required this.trackingId,
@@ -467,6 +530,7 @@ class _ShipmentData {
     required this.amount,
     required this.status,
     required this.processingTime,
+    this.isPaid = false,
   });
 }
 
@@ -480,6 +544,7 @@ const List<_ShipmentData> _shipments = [
     amount: '₦3000',
     status: 'In-Transit',
     processingTime: '10 hours',
+    isPaid: true,
   ),
   _ShipmentData(
     trackingId: 'MAF-100-234-291',
@@ -498,7 +563,7 @@ const List<_ShipmentData> _shipments = [
     pickupFrom: 'Lagos Nigeria',
     deliveryTo: 'Oyo Nigeria',
     amount: '₦3000',
-    status: 'Paid',
+    status: 'In-Transit',
     processingTime: '10 hours',
   ),
 ];
@@ -518,12 +583,32 @@ class _MainContent extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Invite & Earn', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-            const SizedBox(height: 6),
-            Text(
-              'Keep track of your addresses, location updates. Edit, Delete, Update and see all '
-              'your saved addresses',
-              style: AppTextStyles.subheading,
+            const Text(
+              'Invite & Earn',
+              style: TextStyle(
+                fontFamily: 'DM Sans',
+                fontWeight: FontWeight.w700,
+                fontSize: 20,
+                height: 1.0,
+                letterSpacing: 0,
+                color: Color(0xFF171717),
+              ),
+            ),
+            const SizedBox(height: 8),
+            const SizedBox(
+              width: 453,
+              child: Text(
+                'Keep track of your addresses,  location updates. Edit, Delete, Update and see all '
+                'your saved addresses',
+                style: TextStyle(
+                  fontFamily: 'DM Sans',
+                  fontWeight: FontWeight.w400,
+                  fontSize: 12,
+                  height: 20 / 12,
+                  letterSpacing: 0,
+                  color: Color(0xFF737373),
+                ),
+              ),
             ),
             const SizedBox(height: 20),
             const _ShipmentBanner(),
@@ -661,7 +746,6 @@ class _MainContent extends StatelessWidget {
                           fontSize: 14,
                           height: 1.0,
                           letterSpacing: 0,
-                          // Neutral-500, #737373 — not the app's purple.
                           color: const Color(0xFF737373),
                         ),
                       ),
@@ -673,7 +757,11 @@ class _MainContent extends StatelessWidget {
             const SizedBox(height: 12),
             const _GrowthChartCard(),
             const SizedBox(height: 24),
-            for (final shipment in _shipments) _ShipmentTile(data: shipment),
+            for (final entry in _shipments.asMap().entries)
+              _ShipmentTile(
+                data: entry.value,
+                initiallyExpanded: entry.key != _shipments.length - 1,
+              ),
           ],
         ),
       ),
@@ -681,27 +769,20 @@ class _MainContent extends StatelessWidget {
   }
 }
 
-/// One banner slide's content — headline text only; the illustration and
-/// background pattern are shared/identical across every slide.
+/// One banner slide's content.
 class _BannerSlideData {
   final String headline;
   const _BannerSlideData(this.headline);
 }
 
-// Edit these to change what the slider shows. Only one real headline was
-// specified so far ("Effortlessly Track..."); the other two are
-// placeholders in the same voice — swap the text for whatever you want
-// the other slides to say.
+// Edit these to change what the slider shows.
 const List<_BannerSlideData> _bannerSlides = [
   _BannerSlideData('KEEP UP WITH YOUR\nBUSINESS NEEDS'),
   _BannerSlideData('Fast, Secure Deliveries\nAcross 300+ Countries!'),
   _BannerSlideData('Manage Every Shipment\nFrom One Dashboard!'),
 ];
 
-/// The promo card at the top of the dashboard — a real, swipeable slider
-/// (PageView) rather than a static card with decorative dots. The dots
-/// below react to whichever page is actually showing and can be tapped
-/// to jump straight to that slide.
+/// The promo card at the top of the dashboard 
 class _ShipmentBanner extends StatefulWidget {
   const _ShipmentBanner();
 
@@ -742,8 +823,7 @@ class _ShipmentBannerState extends State<_ShipmentBanner> {
   }
 
   void _goToPage(int index) {
-    // A manual jump (tapping a dot) restarts the auto-play clock, so it
-    // doesn't advance again just a moment after the user picked a slide.
+    // A manual jump (tapping a dot) restarts the auto-play clock
     _startAutoPlay();
     _pageController.animateToPage(
       index,
@@ -757,7 +837,7 @@ class _ShipmentBannerState extends State<_ShipmentBanner> {
     return Column(
       children: [
         SizedBox(
-          height: 150,
+          height: 200,
           child: PageView.builder(
             controller: _pageController,
             itemCount: _bannerSlides.length,
@@ -790,8 +870,7 @@ class _ShipmentBannerState extends State<_ShipmentBanner> {
   }
 }
 
-/// A single slide: the shared navy card with diagonal-stripe texture,
-/// your exported globe/boxes illustration, and this slide's headline.
+/// A single slide
 class _BannerSlide extends StatelessWidget {
   final _BannerSlideData data;
   const _BannerSlide({required this.data});
@@ -802,7 +881,11 @@ class _BannerSlide extends StatelessWidget {
       width: double.infinity,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: const Color(0xFF2A2A55),
+        gradient: const LinearGradient(
+          begin: Alignment.bottomLeft,
+          end: Alignment.topRight,
+          colors: [Color(0xFF16183D), Color(0xFF262B5E)],
+        ),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Stack(
@@ -810,27 +893,38 @@ class _BannerSlide extends StatelessWidget {
           Positioned.fill(
             child: CustomPaint(painter: _DiagonalStripesPainter()),
           ),
-          // Exported illustration asset — update this path to match
-          // whatever you named the file under your assets folder, and
-          // make sure it's declared under `flutter: assets:` in
-          // pubspec.yaml (e.g. assets/images/shipment_globe.png).
           Positioned(
-            right: 16,
+            right: -40,
+            top: -30,
+            bottom: -30,
+            width: 300,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    Colors.black.withValues(alpha: 0.18),
+                    Colors.black.withValues(alpha: 0.0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 12,
             top: 0,
             bottom: 0,
             child: Image.asset(
               'assets/images/shipment_globe.png',
-              fit: BoxFit.contain,
+              height: double.infinity,
+              fit: BoxFit.fitHeight,
               errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
             ),
           ),
-          // Vertically centered — the reference shows roughly equal
-          // breathing room above and below the text, not text hugging
-          // the top edge.
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.only(left: 24, right: 24, top: 56, bottom: 24),
             child: Align(
-              alignment: Alignment.centerLeft,
+              alignment: Alignment.bottomLeft,
               child: Text(
                 data.headline.toUpperCase(),
                 style: TextStyle(
@@ -850,16 +944,13 @@ class _BannerSlide extends StatelessWidget {
   }
 }
 
-/// Subtle diagonal-line texture behind each slide, matching the striped
-/// pattern in the design (replaces the dot-grid world map that was here
-/// before — that pattern belongs to the login screen, not this banner).
 class _DiagonalStripesPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.05)
-      ..strokeWidth = 1.2;
-    const spacing = 14.0;
+      ..color = Colors.white.withValues(alpha: 0.035)
+      ..strokeWidth = 1.0;
+    const spacing = 18.0;
     final span = size.width + size.height;
     for (double x = -size.height; x < span; x += spacing) {
       canvas.drawLine(Offset(x, size.height), Offset(x + size.height, 0), paint);
@@ -892,7 +983,7 @@ class _BalanceCard extends StatelessWidget {
               style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
           const SizedBox(height: 14),
           ElevatedButton(
-            onPressed: () {},
+            onPressed: () => _showComingSoonDialog(context),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: AppColors.primaryPurple),
             child: const Text('Fund Wallet'),
           ),
@@ -902,9 +993,7 @@ class _BalanceCard extends StatelessWidget {
   }
 }
 
-/// One of the three "Total Shipment / Total Exports / Total Import"
-/// cards. The leading icon now sits on its own tinted circle
-/// ([iconBg]/[iconFg]) instead of a plain white background.
+/// One of the three "Total Shipment / Total Exports / Total Import" cards.
 class _StatCard extends StatelessWidget {
   final IconData icon;
   final Color iconBg;
@@ -984,8 +1073,7 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-/// The "Company Growth" card with a Year/Month/Week toggle and a
-/// hand-painted line chart (no chart package dependency required).
+/// The "Company Growth" card 
 class _GrowthChartCard extends StatefulWidget {
   const _GrowthChartCard();
 
@@ -997,9 +1085,7 @@ class _GrowthChartCardState extends State<_GrowthChartCard> {
   String _range = 'Year';
 
   static const Map<String, List<double>> _series = {
-    // Matches the reference curve: gentle wave up through x=8, a dip,
-    // a rounded peak at x=10, a sharp dip at x=11, then a steep climb to
-    // near the top at x=12.
+    // Matches the reference curve: gentle wave up through x=8, a dip, 
     'Year': [280, 330, 300, 365, 340, 430, 335, 480, 390, 630, 130, 990],
     'Month': [180, 260, 220, 300, 260, 340, 300, 260, 220, 420, 200, 460],
     'Week': [300, 260, 340, 300, 380, 420, 360, 400, 340, 460, 320, 500],
@@ -1041,8 +1127,7 @@ class _GrowthChartCardState extends State<_GrowthChartCard> {
   }
 }
 
-/// The "This Month ⌄" dropdown next to the Overview header — lets the
-/// user switch between Week/Month/Year, defaulting to Month.
+/// The "This Month ⌄" dropdown
 class _PeriodDropdown extends StatefulWidget {
   const _PeriodDropdown();
 
@@ -1163,12 +1248,7 @@ class _GrowthChartPainter extends CustomPainter {
       points.add(Offset(x, y));
     }
 
-    // Smooth curve through the points, using a Catmull-Rom spline
-    // converted to cubic Beziers. Unlike the previous midpoint-quadratic
-    // approach, this passes exactly through every data point instead of
-    // rounding the peaks and valleys off toward their midpoints — the
-    // 990 peak and 130 dip actually reach their real values instead of
-    // being flattened.
+    // Smooth curve through the points, using a Catmull-Rom spline converted to cubic Beziers.
     final linePath = Path()..moveTo(points.first.dx, points.first.dy);
     for (int i = 0; i < points.length - 1; i++) {
       final p0 = i == 0 ? points[i] : points[i - 1];
@@ -1222,21 +1302,22 @@ class _GrowthChartPainter extends CustomPainter {
 
 class _ShipmentTile extends StatefulWidget {
   final _ShipmentData data;
-  const _ShipmentTile({required this.data});
+  final bool initiallyExpanded;
+  const _ShipmentTile({required this.data, this.initiallyExpanded = true});
 
   @override
   State<_ShipmentTile> createState() => _ShipmentTileState();
 }
 
 class _ShipmentTileState extends State<_ShipmentTile> {
-  bool _expanded = true;
+  late bool _expanded = widget.initiallyExpanded;
 
   _ShipmentData get data => widget.data;
 
   Color get _statusColor {
     switch (data.status) {
       case 'Delayed':
-        return AppColors.danger;
+        return const Color(0xFF003337);
       case 'Paid':
         return AppColors.link;
       default:
@@ -1247,7 +1328,7 @@ class _ShipmentTileState extends State<_ShipmentTile> {
   Color get _statusBg {
     switch (data.status) {
       case 'Delayed':
-        return const Color(0xFFFDECEA);
+        return const Color(0xFFC0FBFF);
       case 'Paid':
         return const Color(0xFFE9E9FB);
       default:
@@ -1259,43 +1340,100 @@ class _ShipmentTileState extends State<_ShipmentTile> {
   Widget build(BuildContext context) {
     final isMobile = Breakpoints.isMobile(context);
 
-    final processingTimeRow = Row(
+    final processingTimeColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.access_time_rounded, size: 14, color: AppColors.textSecondary),
-        const SizedBox(width: 6),
-        Text('Processing time', style: AppTextStyles.subheading.copyWith(fontSize: 12)),
-        const SizedBox(width: 6),
-        Text(data.processingTime, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+        const Text(
+          'Processing time',
+          style: TextStyle(
+            fontFamily: 'DM Sans',
+            fontWeight: FontWeight.w400,
+            fontSize: 12,
+            height: 1.0,
+            color: Color(0xFF808080),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.access_time_rounded, size: 16, color: Color(0xFF3A3A3A)),
+            const SizedBox(width: 8),
+            Text(
+              data.processingTime,
+              style: const TextStyle(
+                fontFamily: 'DM Sans',
+                fontWeight: FontWeight.w400,
+                fontSize: 16,
+                height: 1.0,
+                letterSpacing: 0,
+                color: Color(0xFF3A3A3A),
+              ),
+            ),
+          ],
+        ),
       ],
     );
 
-    final viewMoreButton = OutlinedButton(
-      onPressed: () {},
-      style: OutlinedButton.styleFrom(
-        side: const BorderSide(color: AppColors.inputBorder),
-        foregroundColor: AppColors.textPrimary,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      ),
-      child: const Text('View More'),
+    const viewMoreTextStyle = TextStyle(
+      fontFamily: 'DM Sans',
+      fontWeight: FontWeight.w600,
+      fontSize: 12,
+      height: 1.0,
+      color: Color(0xFF262A48),
     );
 
-    final actionButton = data.status == 'Paid'
-        ? OutlinedButton(
-            onPressed: null,
-            style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: AppColors.inputBorder),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    final viewMoreButton = OutlinedButton(
+      onPressed: () => _showComingSoonDialog(context),
+      style: OutlinedButton.styleFrom(
+        side: const BorderSide(color: AppColors.inputBorder, width: 1),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      child: const Text('View More', style: viewMoreTextStyle),
+    );
+
+    final actionButton = data.isPaid
+        ? Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFEDED),
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: const Text('Paid'),
+            child: const Text(
+              'Paid',
+              style: TextStyle(
+                fontFamily: 'DM Sans',
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+                height: 1.0,
+                color: Color(0xFF808080),
+              ),
+            ),
           )
         : ElevatedButton(
-            onPressed: () {},
+            onPressed: () => _showComingSoonDialog(context),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryPurple,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              backgroundColor: const Color(0xFF32385E),
+              fixedSize: const Size(89.66667175292969, 32),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text('Pay Now'),
+            child: const Text(
+              'Pay Now',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'DM Sans',
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+                height: 1.0,
+                letterSpacing: 0,
+                color: Colors.white,
+              ),
+            ),
           );
 
     return Container(
@@ -1308,70 +1446,89 @@ class _ShipmentTileState extends State<_ShipmentTile> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Wrap(
-                  spacing: 24,
-                  runSpacing: 12,
-                  children: [
-                    _labelValue('Tracking ID', data.trackingId, valueColor: AppColors.link),
-                    _labelValue('Sender', data.sender),
-                    _labelValue('Receiver', data.receiver),
-                  ],
-                ),
+          Container(
+            padding: const EdgeInsets.only(bottom: 16),
+            decoration: const BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: Color(0x80DBD7D7), width: 0.5),
               ),
-              MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: GestureDetector(
-                  onTap: () => setState(() => _expanded = !_expanded),
-                  child: Icon(
-                    _expanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
-                    color: AppColors.textPrimary,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Wrap(
+                    spacing: 79,
+                    runSpacing: 16,
+                    children: [
+                      _topField('Tracking ID', data.trackingId, valueColor: const Color(0xFF5A65AB)),
+                      _topField('Sender', data.sender, valueColor: const Color(0xFF3A3A3A)),
+                      _topField('Receiver', data.receiver, valueColor: const Color(0xFF171717)),
+                    ],
                   ),
                 ),
-              ),
-            ],
-          ),
-          if (_expanded) ...[
-            const Divider(height: 24),
-            Wrap(
-              spacing: 24,
-              runSpacing: 12,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                _locationValue('Pick Up From', data.pickupFrom),
-                _locationValue('Delivery To', data.deliveryTo),
-                _labelValue('Amount', data.amount),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: _statusBg, borderRadius: BorderRadius.circular(20)),
-                  child: Text(
-                    data.status,
-                    style: TextStyle(fontSize: 12, color: _statusColor, fontWeight: FontWeight.w600),
+                MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    onTap: () => setState(() => _expanded = !_expanded),
+                    child: Icon(
+                      _expanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ),
               ],
+            ),
+          ),
+          if (_expanded) ...[
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: const BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: Color(0x80DBD7D7), width: 0.5),
+                ),
+              ),
+              child: isMobile
+                  ? Wrap(
+                      spacing: 24,
+                      runSpacing: 16,
+                      children: [
+                        _locationValue('Pick Up From', data.pickupFrom),
+                        _locationValue('Delivery To', data.deliveryTo),
+                        _amountValue('Amount', data.amount),
+                        _statusField(data.status),
+                      ],
+                    )
+                  : Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        SizedBox(width: 126, child: _locationValue('Pick Up From', data.pickupFrom)),
+                        SizedBox(width: 126, child: _locationValue('Delivery To', data.deliveryTo)),
+                        SizedBox(width: 62, child: _amountValue('Amount', data.amount)),
+                        SizedBox(width: 73, child: _statusField(data.status)),
+                      ],
+                    ),
             ),
             const SizedBox(height: 16),
             if (isMobile)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  processingTimeRow,
-                  const SizedBox(height: 12),
-                  Row(children: [viewMoreButton, const SizedBox(width: 12), actionButton]),
+                  processingTimeColumn,
+                  const SizedBox(height: 16),
+                  Row(children: [viewMoreButton, const SizedBox(width: 8), actionButton]),
                 ],
               )
             else
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  processingTimeRow,
-                  const Spacer(),
-                  viewMoreButton,
-                  const SizedBox(width: 12),
-                  actionButton,
+                  processingTimeColumn,
+                  Row(children: [viewMoreButton, const SizedBox(width: 8), actionButton]),
                 ],
               ),
           ],
@@ -1380,13 +1537,98 @@ class _ShipmentTileState extends State<_ShipmentTile> {
     );
   }
 
-  Widget _labelValue(String label, String value, {Color? valueColor}) {
+  // Tracking ID / Sender / Receiver header fields
+  Widget _topField(String label, String value, {required Color valueColor}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-        const SizedBox(height: 2),
-        Text(value, style: TextStyle(fontSize: 13, color: valueColor ?? AppColors.textPrimary, fontWeight: FontWeight.w500)),
+        Text(
+          label,
+          style: const TextStyle(
+            fontFamily: 'DM Sans',
+            fontWeight: FontWeight.w400,
+            fontSize: 12,
+            height: 1.0,
+            color: Color(0xFF808080),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: TextStyle(
+            fontFamily: 'DM Sans',
+            fontWeight: FontWeight.w400,
+            fontSize: 16,
+            height: 1.0,
+            letterSpacing: 0,
+            color: valueColor,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Amount field
+  Widget _amountValue(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontFamily: 'DM Sans',
+            fontWeight: FontWeight.w400,
+            fontSize: 12,
+            height: 1.0,
+            color: Color(0xFF808080),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: const TextStyle(
+            fontFamily: 'DM Sans',
+            fontWeight: FontWeight.w400,
+            fontSize: 16,
+            height: 1.0,
+            letterSpacing: 0,
+            color: Color(0xFF171717),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Status field
+  Widget _statusField(String status) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Status',
+          style: TextStyle(
+            fontFamily: 'DM Sans',
+            fontWeight: FontWeight.w400,
+            fontSize: 12,
+            height: 1.0,
+            color: Color(0xFF808080),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(color: _statusBg, borderRadius: BorderRadius.circular(8)),
+          child: Text(
+            status,
+            style: TextStyle(
+              fontFamily: 'DM Sans',
+              fontWeight: FontWeight.w500,
+              fontSize: 12,
+              height: 1.0,
+              color: _statusColor,
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -1395,14 +1637,33 @@ class _ShipmentTileState extends State<_ShipmentTile> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-        const SizedBox(height: 2),
+        Text(
+          label,
+          style: const TextStyle(
+            fontFamily: 'DM Sans',
+            fontWeight: FontWeight.w400,
+            fontSize: 12,
+            height: 1.0,
+            color: Color(0xFF808080),
+          ),
+        ),
+        const SizedBox(height: 8),
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             const _NigeriaFlagIcon(),
-            const SizedBox(width: 6),
-            Text(value, style: const TextStyle(fontSize: 13, color: AppColors.textPrimary, fontWeight: FontWeight.w500)),
+            const SizedBox(width: 8),
+            Text(
+              value,
+              style: const TextStyle(
+                fontFamily: 'DM Sans',
+                fontWeight: FontWeight.w400,
+                fontSize: 14,
+                height: 1.0,
+                letterSpacing: 0,
+                color: Color(0xFF171717),
+              ),
+            ),
           ],
         ),
       ],
@@ -1410,8 +1671,7 @@ class _ShipmentTileState extends State<_ShipmentTile> {
   }
 }
 
-/// A small, code-drawn Nigerian flag (green-white-green) — used instead
-/// of a generic location pin next to pickup/delivery addresses.
+/// A small, code-drawn Nigerian flag (green-white-green) 
 class _NigeriaFlagIcon extends StatelessWidget {
   final double width;
   final double height;

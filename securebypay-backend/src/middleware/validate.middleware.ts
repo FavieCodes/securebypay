@@ -46,4 +46,23 @@ export const resetPasswordRules = [
   body('password')
     .isLength({ min: 8 })
     .withMessage('Password must be at least 8 characters long'),
-];
+];
+
+
+const MAX_AVATAR_BASE64_LENGTH = 10 * 1024 * 1024; 
+
+export const avatarUploadRules = [
+  body('image')
+    .trim()
+    .notEmpty()
+    .withMessage('An image is required')
+    .custom((value: string) => {
+      if (!/^data:image\/(png|jpe?g|webp);base64,.+$/i.test(value)) {
+        throw new Error('Image must be a base64 data URI (png, jpg, or webp)');
+      }
+      if (value.length > MAX_AVATAR_BASE64_LENGTH) {
+        throw new Error('Image is too large (max ~3MB)');
+      }
+      return true;
+    }),
+];

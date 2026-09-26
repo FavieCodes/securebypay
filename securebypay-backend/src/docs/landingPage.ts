@@ -370,6 +370,11 @@ export const getLandingPageHtml = (): string => `<!DOCTYPE html>
       color: #60a5fa;
     }
 
+    .method-delete {
+      background: rgba(239, 68, 68, 0.2);
+      color: #fca5a5;
+    }
+
     .form-group {
       margin-bottom: 16px;
     }
@@ -852,6 +857,15 @@ export const getLandingPageHtml = (): string => `<!DOCTYPE html>
               <button class="tab-btn" onclick="switchTab('me')">
                 <span class="method-tag method-get">GET</span> Profile
               </button>
+              <button class="tab-btn" onclick="switchTab('uploadAvatar')">
+                <span class="method-tag method-post">POST</span> Upload Avatar
+              </button>
+              <button class="tab-btn" onclick="switchTab('deleteAvatar')">
+                <span class="method-tag method-delete">DELETE</span> Delete Avatar
+              </button>
+              <button class="tab-btn" onclick="switchTab('getAvatar')">
+                <span class="method-tag method-get">GET</span> Get Avatar
+              </button>
             </div>
 
             <!-- Visual Feedback Toast Banner -->
@@ -939,6 +953,46 @@ export const getLandingPageHtml = (): string => `<!DOCTYPE html>
               </div>
               <button type="submit" class="btn-submit">
                 <span>Fetch Profile (/api/auth/me)</span>
+              </button>
+            </form>
+
+            <!-- Upload Avatar Form -->
+            <form id="form-uploadAvatar" style="display: none;" onsubmit="handleRequest(event, 'uploadAvatar')">
+              <div class="form-group">
+                <label class="form-label">Authorization Bearer Token</label>
+                <input type="text" id="uploadAvatar-token" class="form-input font-mono" placeholder="Sign in to generate token automatically" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Image File (png, jpg, or webp — max ~3MB)</label>
+                <input type="file" id="uploadAvatar-file" class="form-input" accept="image/png,image/jpeg,image/webp" required />
+              </div>
+              <div id="uploadAvatar-preview" style="display: none; margin-bottom: 16px;">
+                <img id="uploadAvatar-previewImg" alt="Selected image preview" style="max-width: 96px; max-height: 96px; border-radius: 8px; border: 1px solid var(--border-color, #333);" />
+              </div>
+              <button type="submit" class="btn-submit">
+                <span>Send Upload Request (POST /api/auth/me/avatar)</span>
+              </button>
+            </form>
+
+            <!-- Delete Avatar Form -->
+            <form id="form-deleteAvatar" style="display: none;" onsubmit="handleRequest(event, 'deleteAvatar')">
+              <div class="form-group">
+                <label class="form-label">Authorization Bearer Token</label>
+                <input type="text" id="deleteAvatar-token" class="form-input font-mono" placeholder="Sign in to generate token automatically" required />
+              </div>
+              <button type="submit" class="btn-submit">
+                <span>Send Delete Request (DELETE /api/auth/me/avatar)</span>
+              </button>
+            </form>
+
+            <!-- Get Avatar Form -->
+            <form id="form-getAvatar" style="display: none;" onsubmit="handleRequest(event, 'getAvatar')">
+              <div class="form-group">
+                <label class="form-label">User ID</label>
+                <input type="text" id="getAvatar-userId" class="form-input font-mono" placeholder="Sign in and fetch profile to auto-fill your user id" required />
+              </div>
+              <button type="submit" class="btn-submit">
+                <span>Fetch Avatar (GET /api/auth/avatar/:userId)</span>
               </button>
             </form>
 
@@ -1256,6 +1310,7 @@ export const getLandingPageHtml = (): string => `<!DOCTYPE html>
 
   <script>
     let activeToken = '';
+    let activeUserId = '';
     let currentLang = 'curl';
 
     const snippets = {
@@ -1304,13 +1359,60 @@ export const getLandingPageHtml = (): string => `<!DOCTYPE html>
       });
     }
 
+    // Reads a File as a base64 data URI (what POST /api/auth/me/avatar
+    // expects in its "image" field) — the same encoding the Flutter
+    // frontend does client-side before it ever reaches this API.
+    function readFileAsDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error || new Error('Could not read file'));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Live preview of the chosen avatar file, so it's obvious what's
+    // about to be uploaded before the request is even sent.
+    document.addEventListener('DOMContentLoaded', () => {
+      const fileInput = document.getElementById('uploadAvatar-file');
+      if (fileInput) {
+        fileInput.addEventListener('change', () => {
+          const file = fileInput.files && fileInput.files[0];
+          const preview = document.getElementById('uploadAvatar-preview');
+          const previewImg = document.getElementById('uploadAvatar-previewImg');
+          if (!file) {
+            preview.style.display = 'none';
+            return;
+          }
+          readFileAsDataUrl(file).then((dataUrl) => {
+            previewImg.src = dataUrl;
+            preview.style.display = 'block';
+          });
+        });
+      }
+    });
+
+    // Keeps every token/user-id field in the sandbox in sync once a
+    // token or profile becomes available, so switching tabs never means
+    // re-typing the same value by hand.
+    function syncSessionFields() {
+      ['me-token', 'uploadAvatar-token', 'deleteAvatar-token'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el && activeToken) el.value = activeToken;
+      });
+      if (activeUserId) {
+        const el = document.getElementById('getAvatar-userId');
+        if (el) el.value = activeUserId;
+      }
+    }
+
     async function handleRequest(event, type) {
       event.preventDefault();
       const consoleBody = document.getElementById('consoleBody');
       const statusTag = document.getElementById('statusTag');
       const feedbackBanner = document.getElementById('formFeedback');
-      
-      consoleBody.textContent = '// Sending request...';
+
+      consoleBody.innerHTML = '// Sending request...';
       feedbackBanner.style.display = 'none';
 
       let url = '';
@@ -1348,27 +1450,84 @@ export const getLandingPageHtml = (): string => `<!DOCTYPE html>
       } else if (type === 'me') {
         url = '/api/auth/me';
         method = 'GET';
+        headers = {};
         const token = document.getElementById('me-token').value || activeToken;
         if (token) {
           headers['Authorization'] = 'Bearer ' + token;
         }
+      } else if (type === 'uploadAvatar') {
+        url = '/api/auth/me/avatar';
+        const token = document.getElementById('uploadAvatar-token').value || activeToken;
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+
+        const fileInput = document.getElementById('uploadAvatar-file');
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) {
+          feedbackBanner.style.display = 'flex';
+          feedbackBanner.className = 'feedback-banner feedback-error';
+          feedbackBanner.innerHTML = '<span><strong>Missing file:</strong> choose an image before submitting.</span>';
+          consoleBody.textContent = '// No file selected';
+          return;
+        }
+        let dataUrl;
+        try {
+          dataUrl = await readFileAsDataUrl(file);
+        } catch (err) {
+          feedbackBanner.style.display = 'flex';
+          feedbackBanner.className = 'feedback-banner feedback-error';
+          feedbackBanner.innerHTML = '<span><strong>Could not read file:</strong> ' + err.message + '</span>';
+          consoleBody.textContent = '// File read error: ' + err.message;
+          return;
+        }
+        body = JSON.stringify({ image: dataUrl });
+      } else if (type === 'deleteAvatar') {
+        url = '/api/auth/me/avatar';
+        method = 'DELETE';
+        headers = {};
+        const token = document.getElementById('deleteAvatar-token').value || activeToken;
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+      } else if (type === 'getAvatar') {
+        const userId = document.getElementById('getAvatar-userId').value;
+        url = '/api/auth/avatar/' + encodeURIComponent(userId);
+        method = 'GET';
+        headers = {};
       }
 
       const startTime = performance.now();
       try {
         const res = await fetch(url, { method, headers, body });
         const latency = Math.round(performance.now() - startTime);
+        const contentType = res.headers.get('content-type') || '';
+
+        statusTag.style.display = 'inline-block';
+        statusTag.textContent = res.status + ' ' + res.statusText + ' (' + latency + 'ms)';
+        statusTag.className = 'status-tag ' + (res.ok ? 'status-2xx' : 'status-4xx');
+
+        // GET /api/auth/avatar/:userId returns a raw PNG on success, and
+        // JSON only on the 404-no-picture-set case — the two need
+        // completely different rendering in the console.
+        if (type === 'getAvatar' && res.ok && contentType.startsWith('image/')) {
+          const blob = await res.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          consoleBody.innerHTML = '// Binary image response (' + contentType + ', ' + blob.size + ' bytes)<br/><img src="' + objectUrl + '" alt="Fetched avatar" style="max-width: 200px; max-height: 200px; border-radius: 8px; margin-top: 8px; border: 1px solid rgba(255,255,255,0.15);" />';
+
+          feedbackBanner.style.display = 'flex';
+          feedbackBanner.className = 'feedback-banner feedback-success';
+          feedbackBanner.innerHTML = '<span><strong>Success (' + res.status + '):</strong> Profile picture fetched.</span>';
+          return;
+        }
+
         const data = await res.json();
 
         if (data.data && data.data.token) {
           activeToken = data.data.token;
           document.getElementById('sessionToken').textContent = activeToken;
-          document.getElementById('me-token').value = activeToken;
+          syncSessionFields();
         }
-
-        statusTag.style.display = 'inline-block';
-        statusTag.textContent = res.status + ' ' + res.statusText + ' (' + latency + 'ms)';
-        statusTag.className = 'status-tag ' + (res.ok ? 'status-2xx' : 'status-4xx');
+        if (data.data && data.data.user && data.data.user.id) {
+          activeUserId = data.data.user.id;
+          syncSessionFields();
+        }
 
         consoleBody.textContent = JSON.stringify(data, null, 2);
 

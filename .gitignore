@@ -25,4 +25,4 @@ yarn-error.log*
 # --- Editors / OS ---
 .idea/
 *.iml
-.DS_Store
+.DS_Store*.zip
