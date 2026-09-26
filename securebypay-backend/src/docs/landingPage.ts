@@ -843,6 +843,12 @@ export const getLandingPageHtml = (): string => `<!DOCTYPE html>
               <button class="tab-btn" onclick="switchTab('login')">
                 <span class="method-tag method-post">POST</span> Login
               </button>
+              <button class="tab-btn" onclick="switchTab('forgot')">
+                <span class="method-tag method-post">POST</span> Forgot Password
+              </button>
+              <button class="tab-btn" onclick="switchTab('reset')">
+                <span class="method-tag method-post">POST</span> Reset Password
+              </button>
               <button class="tab-btn" onclick="switchTab('me')">
                 <span class="method-tag method-get">GET</span> Profile
               </button>
@@ -892,6 +898,36 @@ export const getLandingPageHtml = (): string => `<!DOCTYPE html>
               </div>
               <button type="submit" class="btn-submit">
                 <span>Send Login Request</span>
+              </button>
+            </form>
+
+            <!-- Forgot Password Form -->
+            <form id="form-forgot" style="display: none;" onsubmit="handleRequest(event, 'forgot')">
+              <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" id="forgot-email" class="form-input" value="imo.dev@example.com" required />
+              </div>
+              <button type="submit" class="btn-submit">
+                <span>Send Reset Code</span>
+              </button>
+            </form>
+
+            <!-- Reset Password Form -->
+            <form id="form-reset" style="display: none;" onsubmit="handleRequest(event, 'reset')">
+              <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" id="reset-email" class="form-input" value="imo.dev@example.com" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Reset Code</label>
+                <input type="text" id="reset-token" class="form-input font-mono" placeholder="e.g. 123456" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label">New Password (min 8 chars)</label>
+                <input type="password" id="reset-password" class="form-input" value="NewSuperSecret123" required />
+              </div>
+              <button type="submit" class="btn-submit">
+                <span>Send Reset Password Request</span>
               </button>
             </form>
 
@@ -967,6 +1003,28 @@ export const getLandingPageHtml = (): string => `<!DOCTYPE html>
 
           <div class="endpoint-card">
             <div class="endpoint-meta">
+              <span class="method-tag method-post">POST</span>
+              <div>
+                <div class="endpoint-path">/api/auth/forgot-password</div>
+                <div class="endpoint-desc">Requests a password reset code for the given email. Always returns 200, even for unknown emails, so the response can't be used to enumerate registered accounts.</div>
+              </div>
+            </div>
+            <span class="auth-badge auth-public">Public</span>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-meta">
+              <span class="method-tag method-post">POST</span>
+              <div>
+                <div class="endpoint-path">/api/auth/reset-password</div>
+                <div class="endpoint-desc">Sets a new password given the email, the reset code, and the new password. The code expires after use or after a fixed time window.</div>
+              </div>
+            </div>
+            <span class="auth-badge auth-public">Public</span>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-meta">
               <span class="method-tag method-get">GET</span>
               <div>
                 <div class="endpoint-path">/api/auth/me</div>
@@ -974,6 +1032,39 @@ export const getLandingPageHtml = (): string => `<!DOCTYPE html>
               </div>
             </div>
             <span class="auth-badge auth-bearer">Bearer Token</span>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-meta">
+              <span class="method-tag method-post">POST</span>
+              <div>
+                <div class="endpoint-path">/api/auth/me/avatar</div>
+                <div class="endpoint-desc">Uploads or replaces the authenticated user's profile picture (base64 PNG/JPEG/WEBP data URI, normalized to PNG server-side).</div>
+              </div>
+            </div>
+            <span class="auth-badge auth-bearer">Bearer Token</span>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-meta">
+              <span class="method-tag method-get" style="background: rgba(239, 68, 68, 0.15); color: #fca5a5;">DEL</span>
+              <div>
+                <div class="endpoint-path">/api/auth/me/avatar</div>
+                <div class="endpoint-desc">Removes the authenticated user's profile picture.</div>
+              </div>
+            </div>
+            <span class="auth-badge auth-bearer">Bearer Token</span>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-meta">
+              <span class="method-tag method-get">GET</span>
+              <div>
+                <div class="endpoint-path">/api/auth/avatar/:userId</div>
+                <div class="endpoint-desc">Serves a user's profile picture as raw image bytes — public with no auth, since it's used directly as an &lt;img&gt;/NetworkImage src.</div>
+              </div>
+            </div>
+            <span class="auth-badge auth-public">Public</span>
           </div>
 
           <div class="endpoint-card">
@@ -1241,6 +1332,18 @@ export const getLandingPageHtml = (): string => `<!DOCTYPE html>
         body = JSON.stringify({
           email: document.getElementById('login-email').value,
           password: document.getElementById('login-password').value,
+        });
+      } else if (type === 'forgot') {
+        url = '/api/auth/forgot-password';
+        body = JSON.stringify({
+          email: document.getElementById('forgot-email').value,
+        });
+      } else if (type === 'reset') {
+        url = '/api/auth/reset-password';
+        body = JSON.stringify({
+          email: document.getElementById('reset-email').value,
+          token: document.getElementById('reset-token').value,
+          password: document.getElementById('reset-password').value,
         });
       } else if (type === 'me') {
         url = '/api/auth/me';

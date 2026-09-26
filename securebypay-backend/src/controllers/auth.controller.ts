@@ -18,6 +18,7 @@ import { hashPassword, comparePassword } from '../utils/password';
 import { signToken } from '../utils/jwt';
 import { logger } from '../utils/logger';
 
+
 const toPublicUserJson = (
   user: PublicUser | AuthLookupUser,
   req: Request
@@ -33,10 +34,7 @@ const toPublicUserJson = (
     : null,
 });
 
-
 const AVATAR_DATA_URI = /^data:(image\/(?:png|jpe?g|webp));base64,(.+)$/i;
-
-// --- Signup -----------------------------------------------------
 
 export const signup = async (
   req: Request,
@@ -64,7 +62,6 @@ export const signup = async (
       return;
     }
 
-    // --- Password harsh -----------------------------------------------------
     const passwordHash = await hashPassword(password);
     const user = await createUser({
       firstName,
@@ -88,8 +85,6 @@ export const signup = async (
   }
 };
 
-// --- Login -----------------------------------------------------
-
 export const login = async (
   req: Request,
   res: Response,
@@ -102,17 +97,16 @@ export const login = async (
     if (!user) {
       res.status(401).json({
         success: false,
-        message: 'Invalid email or password',
+        message: 'Incorrect username or password',
       });
       return;
     }
 
-    // --- Password compare -----------------------------------------------------
     const isMatch = await comparePassword(password, user.passwordHash);
     if (!isMatch) {
       res.status(401).json({
         success: false,
-        message: 'Invalid email or password',
+        message: 'Incorrect username or password',
       });
       return;
     }
@@ -132,8 +126,6 @@ export const login = async (
   }
 };
 
-// --- Get logged in user -----------------------------------------------------
-
 export const me = async (
   req: Request,
   res: Response,
@@ -150,8 +142,6 @@ export const me = async (
     next(err);
   }
 };
-
-// --- Forgot password -----------------------------------------------------
 
 export const forgotPassword = async (
   req: Request,
@@ -185,8 +175,6 @@ export const forgotPassword = async (
     next(err);
   }
 };
-
-// --- Reset password -----------------------------------------------------
 
 export const resetPassword = async (
   req: Request,
@@ -252,7 +240,6 @@ export const uploadAvatar = async (
 ): Promise<void> => {
   try {
     const { image } = req.body as { image: string };
-  
     const match = AVATAR_DATA_URI.exec(image.trim());
     if (!match) {
       res.status(400).json({ success: false, message: 'Invalid image data' });
