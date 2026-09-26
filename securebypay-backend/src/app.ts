@@ -2,8 +2,7 @@ import express, { type Request, type Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
-
-import swaggerSpec from './docs/swagger';
+import openapiSpec from './docs/openapi.generated.json';
 import { getLandingPageHtml } from './docs/landingPage';
 import { getSwaggerHtml } from './docs/swaggerPage';
 import authRoutes from './routes/auth.routes';
@@ -31,11 +30,11 @@ app.get('/health', (_req: Request, res: Response) => {
 app.use('/api/auth', authRoutes);
 
 app.get('/openapi.json', (_req: Request, res: Response) => {
-  res.status(200).json(swaggerSpec);
+  res.status(200).json(openapiSpec);
 });
 
 app.get('/api/v1/docs/openapi.json', (_req: Request, res: Response) => {
-  res.status(200).json(swaggerSpec);
+  res.status(200).json(openapiSpec);
 });
 
 
